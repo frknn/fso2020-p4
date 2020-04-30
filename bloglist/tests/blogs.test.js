@@ -74,9 +74,10 @@ describe('most likes', () => {
     likes: 29
   }
 
-  test.only('find author who has most likes on his blogs', () => {
+  test('find author who has most likes on his blogs', () => {
     const result = listHelper.mostLikes(blogs)
     expect(result).toEqual(authorWithMostLikes)
   })
 
 })
+
