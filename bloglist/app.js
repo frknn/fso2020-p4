@@ -1,8 +1,10 @@
 const config = require('./utils/config')
 const express = require('express')
 const cors = require('cors')
+const middleware = require('./utils/middleware')
 const mongoose = require('mongoose')
 const blogs = require('./controllers/blogs')
+const users = require('./controllers/users')
 
 // express app
 const app = express()
@@ -15,5 +17,8 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api/blogs', blogs)
+app.use('/api/users', users)
+
+app.use(middleware.errorHandler)
 
 module.exports = app
