@@ -95,6 +95,44 @@ describe('blog-rest-api', () => {
       .expect(400)
   })
 
+  test('delete an existing resource', async () => {
+    const blogsAtStart = await blogsInDb()
+    const blogToDelete = blogsAtStart[0]
+
+    await api
+      .delete(`/api/blogs/${blogToDelete._id}`)
+      .expect(204)
+
+    const blogsAtEnd = await blogsInDb()
+
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length - 1)
+    expect(blogsAtEnd).not.toContainEqual(blogToDelete)
+
+  })
+
+  test('increment likes of an existing resource by one', async () => {
+    const blogsAtStart = await blogsInDb()
+    const blogToUpdate = blogsAtStart[0]
+
+    const updatedBlog = {
+      ...blogToUpdate,
+      likes: blogToUpdate.likes + 1
+    }
+
+    await api
+      .put(`/api/blogs/${blogToUpdate._id}`)
+      .send(updatedBlog)
+      .expect(200)
+
+    const blogsAtEnd = await blogsInDb()
+    const updatedBlogInDb = blogsAtEnd[0]
+
+    expect(blogsAtEnd).toHaveLength(initialBlogs.length)
+    expect(blogsAtEnd).not.toContainEqual(blogToUpdate)
+    expect(updatedBlogInDb.likes).toBe(blogToUpdate.likes + 1)
+
+  })
+
 })
 
 
