@@ -1,6 +1,8 @@
 const router = require('express').Router()
 const Blog = require('../models/Blog')
 const User = require('../models/User')
+const jwt = require('jsonwebtoken')
+const { SECRET } = require('../utils/config')
 
 router.get('/', async (req, res) => {
 
@@ -9,38 +11,55 @@ router.get('/', async (req, res) => {
 
 })
 
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
 
   const body = req.body
 
-  if (!req.body.title || !req.body.url) {
-    return res.status(400).json({ error: 'Please provide both title and url.' })
+  try {
+    const decodedToken = jwt.verify(req.token, SECRET)
+
+    if (!body.title || !body.url) {
+      return res.status(400).json({ error: 'Please provide both title and url.' })
+    }
+
+    const user = await User.findById(decodedToken.id)
+
+    const blog = new Blog({
+      ...req.body,
+      user: user._id
+    })
+    const savedBlog = await blog.save()
+
+    user.blogs = user.blogs.concat(savedBlog._id)
+    await user.save()
+
+    res.status(201).json(savedBlog)
+  } catch (err) {
+    next(err)
   }
-
-  const users = await User.find()
-
-  const user = users[0];
-
-  const blog = new Blog({
-    ...req.body,
-    user: user._id
-  })
-  const savedBlog = await blog.save()
-
-  user.blogs = user.blogs.concat(savedBlog._id)
-  await user.save()
-
-  res.status(201).json(savedBlog)
-
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req, res, next) => {
 
-  const result = await Blog.findByIdAndRemove(req.params.id)
-  if (result) {
-    res.status(204).end()
-  } else {
-    return res.status(404).end()
+  try {
+    const decodedToken = jwt.verify(req.token, SECRET)
+    const blogToDelete = await Blog.findById(req.params.id)
+    const user = await User.findById(decodedToken.id)
+
+    if (!(blogToDelete.user.toString() === user._id.toString())) {
+      return res.status(401).json({ error: 'Not authorized to perform this operation.' })
+    }
+
+    const result = await blogToDelete.remove()
+    if (result) {
+      res.status(204).end()
+    } else {
+      return res.status(404).end()
+
+    }
+
+  } catch (err) {
+    next(err)
   }
 })
 
