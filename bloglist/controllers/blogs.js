@@ -28,7 +28,7 @@ router.post('/', async (req, res, next) => {
       ...req.body,
       user: user._id
     })
-    const savedBlog = await blog.save()
+    const savedBlog = await (await blog.save()).populate('user').execPopulate()
 
     user.blogs = user.blogs.concat(savedBlog._id)
     await user.save()
@@ -50,12 +50,15 @@ router.delete('/:id', async (req, res, next) => {
       return res.status(401).json({ error: 'Not authorized to perform this operation.' })
     }
 
+    const indexOfDeletedBlog = user.blogs.indexOf(blogToDelete._id)
+    user.blogs.splice(indexOfDeletedBlog,1)
+
     const result = await blogToDelete.remove()
+    await user.save()
     if (result) {
       res.status(204).end()
     } else {
       return res.status(404).end()
-
     }
 
   } catch (err) {
@@ -73,10 +76,17 @@ router.put('/:id', async (req, res) => {
     url: body.url
   }
 
-  const result = await Blog.findByIdAndUpdate(req.params.id, blogToUpdate, { new: true })
+  const result = await Blog.findByIdAndUpdate(req.params.id, blogToUpdate, { new: true }).populate('user')
 
   res.json(result)
 
 })
 
+router.post('/:id/comments', async (req, res, next) => {
+  const blog = await Blog.findById(req.params.id)
+  blog.comments.push(req.body.comment)
+  await blog.save()
+  const result = await Blog.findById(req.params.id).populate('user')
+  res.json(result)
+})
 module.exports = router
